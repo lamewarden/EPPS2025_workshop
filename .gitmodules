@@ -1,0 +1,3 @@
+[submodule "Lamewarden_tools"]
+	path = Lamewarden_tools
+	url = https://github.com/lamewarden/Lamewarden_tools.git

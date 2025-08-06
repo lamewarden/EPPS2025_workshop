@@ -1,0 +1,59 @@
+# Ignore everything
+*.bil
+*.hdr
+*.xml
+*.mat
+*.ini
+*.mat
+*.zip
+*.gz
+*.tar
+*.avi
+*.lnk
+*.pth
+*.pt
+*.pkl
+# *.yml
+
+# submodule
+./Lamewarden_tools/
+./suppl_files/
+
+# Specifically exclude all image formats
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+
+# Exclude CSV and Excel tables
+*.csv
+*.xls
+*.xlsx
+
+# Exclude JSON files
+*.json
+
+# Exclude log files
+*.log
+
+# Exclude all Visual Studio Code temporary or service files
+.vscode/
+*.code-workspace
+
+# Additional common directories and files to ignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.ipynb_checkpoints
+
+# System files
+.DS_Store
+Thumbs.db
+*.~lock*
+
+# local symlink
+data/
+data
