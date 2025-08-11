@@ -42,6 +42,7 @@ class HS_image:
         self.ind = [int(float(x)) for x in self.meta['wavelength'][:-1]]
         self.bits = int(self.meta['data type'])
         self.normalized = False
+        self.calibrated = False
         # self.bits = hdr.bits
         # self.line = self.name.split('-')[2]
 
@@ -120,9 +121,10 @@ class HS_image:
             except ValueError:
                 self.img = self.img / self[to_wl]
             self.img[np.isnan(self.img)] = 0
+            self.img[np.isinf(self.img)] = 0
             self.img = np.clip(self.img, 0, clip_to)
             # finite_max = np.max(self.img[np.isfinite(self.img)])
-            self.img[np.isinf(self.img)] = 0
+            # self.img[np.isinf(self.img)] = 0
             self.normalized=True
 
     def standardize(self):
@@ -398,19 +400,34 @@ def get_rgb_sample(image, normalize=True, colorize_array=False, correct=True):
         R = (image[670] / 4095)
         G = (image[595] / 4095)
         B = (image[495] / 4095)
-    elif np.mean(image.ind) < 900 and len(image.ind) > 6:
-        R = np.mean([image[value] for value in image.ind if value >= 570 and value <= 650],axis=0)
-        G = np.mean([image[value] for value in image.ind if value >= 520 and value <= 570],axis=0)
-        B = np.mean([image[value] for value in image.ind if value >= 450 and value <= 520],axis=0)
-    elif np.mean(image.ind) > 900:
-        R = np.mean([image[value] for value in image.ind if value >= 1000 and value <= 1100],axis=0)
-        G = np.mean([image[value] for value in image.ind if value >= 1200 and value <= 1300],axis=0)
-        B = np.mean([image[value] for value in image.ind if value >= 1400 and value <= 1500],axis=0)
+    elif np.mean(image.ind) < 900 and len(image.ind) > 6 and image.bits == 12 and image.calibrated == False:
+        R = np.mean([image[value] for value in image.ind if value >= 570 and value <= 650],axis=0)/4095
+        G = np.mean([image[value] for value in image.ind if value >= 520 and value <= 570],axis=0)/4095
+        B = np.mean([image[value] for value in image.ind if value >= 450 and value <= 520],axis=0)/4095
+
+    elif np.mean(image.ind) < 900 and len(image.ind) > 6 and image.bits == 12 and image.calibrated == True:
+        # scaling to 95% of total reflectance
+        global_95 = np.percentile(image.img[1:-1,20:-20,:], 95)
+        R = np.clip(np.mean([image[value] for value in image.ind if value >= 570 and value <= 650],axis=0)/global_95, 0, 1)
+        G = np.clip(np.mean([image[value] for value in image.ind if value >= 520 and value <= 570],axis=0)/global_95, 0, 1)
+        B = np.clip(np.mean([image[value] for value in image.ind if value >= 450 and value <= 520],axis=0)/global_95, 0, 1)
+    elif np.mean(image.ind) > 900 and image.bits == 12:
+        R = np.mean([image[value] for value in image.ind if value >= 1000 and value <= 1100],axis=0)/4095
+        G = np.mean([image[value] for value in image.ind if value >= 1200 and value <= 1300],axis=0)/4095
+        B = np.mean([image[value] for value in image.ind if value >= 1400 and value <= 1500],axis=0)/4095
     if correct:
-        # Remove outliers (values that are more than 3 standard deviations away from the mean)
-        R = np.where(np.abs(R - np.mean(R)) > 2*np.std(R), np.mean(R), R)
-        G = np.where(np.abs(G - np.mean(G)) > 2*np.std(G), np.mean(G), G)
-        B = np.where(np.abs(B - np.mean(B)) > 2*np.std(B), np.mean(B), B)
+        # Remove outliers only if the value is an outlier in all 3 channels (more than 4 std from mean in each)
+        R_mean, R_std = np.mean(R), np.std(R)
+        G_mean, G_std = np.mean(G), np.std(G)
+        B_mean, B_std = np.mean(B), np.std(B)
+        outlier_mask = (
+            (np.abs(R - R_mean) > 4 * R_std) &
+            (np.abs(G - G_mean) > 4 * G_std) &
+            (np.abs(B - B_mean) > 4 * B_std)
+        )
+        R = np.where(outlier_mask, R_mean, R)
+        G = np.where(outlier_mask, G_mean, G)
+        B = np.where(outlier_mask, B_mean, B)
         # Replace NaNs with the mean of the layer
         R = np.nan_to_num(R, nan=np.nanmin(R))
         G = np.nan_to_num(G, nan=np.nanmin(G))
@@ -421,9 +438,9 @@ def get_rgb_sample(image, normalize=True, colorize_array=False, correct=True):
         G = np.where(np.isinf(G), np.nanmax(G), G)
         B = np.where(np.isinf(B), np.nanmax(B), B)
     if normalize:
-        R = R/np.max(R)
-        G = G/np.max(G)
-        B = B/np.max(B)
+        R = R/np.max(R.squeeze()[5:-5,20:-20])
+        G = G/np.max(G.squeeze()[5:-5,20:-20])
+        B = B/np.max(B.squeeze()[5:-5,20:-20])
     # converting sample to the dict of spectral bands
     rgb_sample = np.dstack((R, G, B))
     return rgb_sample
