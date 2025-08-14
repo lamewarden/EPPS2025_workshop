@@ -389,7 +389,7 @@ def get_hdr_images(folder, min_rows = 1, format='hdr'):
     return all_images
 
 
-def get_rgb_sample(image, normalize=True, colorize_array=False, correct=True):
+def get_rgb_sample(image, normalize=True, colorize_array=False, correct=True, repeat=False, show=False, title='RGB Sample', axes=False):
     # For now we won't stretch all images, just one for visualization
 
     if colorize_array:
@@ -443,6 +443,19 @@ def get_rgb_sample(image, normalize=True, colorize_array=False, correct=True):
         B = B/np.max(B.squeeze()[5:-5,20:-20])
     # converting sample to the dict of spectral bands
     rgb_sample = np.dstack((R, G, B))
+    if repeat:
+        # Repeat the RGB channels to match the original image shape
+        # Ensure rgb_sample is at least 3D
+        if rgb_sample.ndim == 2:
+            rgb_sample = rgb_sample[:, :, np.newaxis]
+        # Repeat along axis=0 (rows)
+        rgb_sample = np.repeat(rgb_sample, repeat, axis=0)
+    if show:
+        plt.imshow(rgb_sample)
+        plt.title(title)
+        if not axes:
+            plt.axis('off')
+        plt.show()
     return rgb_sample
 
 def get_rgb_from_array(image, normalize=True, correct=True):
