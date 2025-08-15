@@ -456,6 +456,7 @@ def get_rgb_sample(image, normalize=True, colorize_array=False, correct=True, re
         if not axes:
             plt.axis('off')
         plt.show()
+        image.rgb_sample = rgb_sample
     return rgb_sample
 
 def get_rgb_from_array(image, normalize=True, correct=True):
